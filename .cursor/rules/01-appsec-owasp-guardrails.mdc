@@ -1,0 +1,31 @@
+---
+description: OWASP Top 10 / CWE defensive guardrails for C# and T-SQL. Apply to all code generation, refactoring and review.
+alwaysApply: true
+---
+# AppSec Guardrails (OWASP Top 10 / CWE)
+Act as a security-first .NET reviewer. All output is reviewed by a human. Never trade safety for brevity.
+
+## Injection (A03 / CWE-89)
+- C#: `SqlCommand` + `SqlParameter` with explicit `SqlDbType`/size. EF Core: LINQ or `FromSql($"...")` only; never `FromSqlRaw`/`ExecuteSqlRaw` with concatenated input.
+- Never build SQL with `$""`, `+`, `string.Format`, or `StringBuilder`.
+- T-SQL: dynamic SQL only via `sp_executesql` with typed `@params`. `EXEC(@sql)` is banned.
+- Identifiers (table/column/ORDER BY) must be allowlisted and wrapped in `QUOTENAME()`.
+
+## XSS (A03 / CWE-79)
+- Encode at output for the context: `HtmlEncoder.Default`, `JavaScriptEncoder.Default`, `UrlEncoder.Default`, or `WebUtility.HtmlEncode`.
+- Never use `Html.Raw`, `MarkupString`, or raw concatenation into HTML/JS with untrusted data.
+
+## Broken Access Control (A01 / CWE-639, CWE-22)
+- IDOR: every lookup by ID enforces ownership/tenant server-side (`WHERE Id = @id AND OwnerId = @userId`). Take the user identity from the authenticated principal only, never from the request body or query.
+- Return 404 for resources the user does not own when existence must not leak.
+- Path traversal: use `Path.GetFileName`, then `Path.GetFullPath(Path.Combine(root, name))`, then verify it `StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.Ordinal)`. Reject rooted paths and `..`. Prefer server-generated file names.
+
+## Validation & Logging (A04, A09 / CWE-20, CWE-532, CWE-209)
+- Allowlist validation at trust boundaries: type, length, range, and regex with a `matchTimeout`. Reject invalid input; do not "clean and continue".
+- Never log PII, PHI, secrets, tokens, connection strings, or raw stack traces (`ex.ToString()`).
+- Return generic `ProblemDetails` to clients, with a correlation ID.
+- No hardcoded secrets. Read them from configuration or a secret store.
+
+## Human-in-the-Loop
+- If a fix could change business behavior (auth semantics, data shape, status codes), STOP and emit `// HUMAN-REVIEW: <question>` instead of guessing.
+- Tag every security change with its CWE ID in a short comment or summary.
