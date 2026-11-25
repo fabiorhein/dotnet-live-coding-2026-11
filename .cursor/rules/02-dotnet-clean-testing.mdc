@@ -1,0 +1,30 @@
+---
+description: Idiomatic .NET 8+ C# standards, mandatory xUnit coverage for security and edge cases, and minimal-diff output discipline.
+alwaysApply: true
+---
+# .NET 8+ Clean Code & Testing
+
+## C# Standards
+- Nullable reference types are enabled. Never use the `!` operator to silence warnings.
+- Guard public inputs with `ArgumentNullException.ThrowIfNull` and `ArgumentException.ThrowIfNullOrWhiteSpace`.
+- Depend on interfaces and use constructor injection (primary constructors are fine). No `new` for services, no static mutable state, no service locator.
+- Use `async`/`await` with a `CancellationToken` for new I/O, unless preserving an existing synchronous signature. Never call `.Result` or `.Wait()`.
+- Use `using` / `await using` for connections, commands and streams.
+- Catch specific exceptions only and never swallow them. Add context and rethrow with `throw;`.
+- Prefer `sealed`, `record`, file-scoped namespaces and pattern matching. Keep methods small with one responsibility.
+
+## Testing (xUnit): required for any new or refactored logic
+- Name tests `Method_Scenario_ExpectedResult` and follow Arrange/Act/Assert.
+- Cover the happy path plus these cases:
+  - null, empty and whitespace inputs, and boundary lengths;
+  - injection payloads: `' OR 1=1--`, `<script>alert(1)</script>`, `../../etc/passwd`;
+  - unauthorized and other-tenant IDs.
+- Use `[Theory]` + `[InlineData]` for payload sets.
+- Mock dependencies through interfaces (Moq or NSubstitute). No real DB or network calls in unit tests.
+- Assert security outcomes explicitly: input sent as a parameter, output encoded, expected exception type, 403/404 result, no data leaked.
+
+## Output Discipline
+- Produce minimal diffs. Change only what the task requires: no unrelated reformatting, renames or reordering.
+- No conversational filler, apologies or restated requirements. Show the code first, then at most 3 bullets of rationale.
+- Do not invent APIs, NuGet packages or file paths. Ask if something is unknown.
+- Preserve public signatures and contracts unless told explicitly to change them.
